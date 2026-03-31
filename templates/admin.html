@@ -1,0 +1,230 @@
+{% extends "base.html" %}
+{% block title %}Streamora - Manage Content{% endblock %}
+
+{% block content %}
+<div class="container py-5 mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="fw-bold mb-0"><i class="fa fa-cogs text-danger me-2" style="color: var(--brand-red) !important;"></i>Content Management</h2>
+        <button class="btn btn-brand rounded-pill px-4 py-2 fw-bold" data-bs-toggle="modal" data-bs-target="#addMovieModal">
+            <i class="fa fa-plus me-2"></i> Add Movie
+        </button>
+    </div>
+
+    <!-- Movie Catalog -->
+    <div class="card border-0 shadow rounded-4 p-4" style="background: var(--bg-card);">
+        <div class="table-responsive">
+            <table class="table table-dark table-hover align-middle mb-0" style="background: transparent;">
+                <thead>
+                    <tr style="border-bottom: 2px solid rgba(255,255,255,0.1);">
+                        <th width="80">Thumb</th>
+                        <th>Title</th>
+                        <th>Category</th>
+                        <th width="150" class="text-end">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for movie in movies %}
+                    <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
+                        <td>
+                            <img src="{{ movie.thumbnail }}" class="rounded shadow-sm" width="60" height="90" style="object-fit:cover;" onerror="this.src='https://via.placeholder.com/60x90?text=N/A';">
+                        </td>
+                        <td class="fw-bold">{{ movie.title }}</td>
+                        <td><span class="badge bg-secondary bg-opacity-50 fw-normal">{{ movie.category }}</span></td>
+                        <td class="text-end">
+                            <button class="btn btn-sm btn-outline-light rounded-pill px-3 me-2" data-bs-toggle="modal" data-bs-target="#editModal{{ movie.id }}"><i class="fa fa-pencil"></i></button>
+                            <form action="/admin/delete/{{ movie.id }}" method="POST" class="d-inline" onsubmit="return confirm('Are you sure you want to delete {{ movie.title|escape }}?');">
+                                <button type="submit" class="btn btn-sm btn-outline-danger rounded-pill px-3"><i class="fa fa-trash"></i></button>
+                            </form>
+                        </td>
+                    </tr>
+
+                    <!-- Edit Modal -->
+                    <div class="modal fade" id="editModal{{ movie.id }}" tabindex="-1">
+                        <div class="modal-dialog modal-dialog-centered">
+                            <div class="modal-content text-light border-0" style="background: var(--bg-card);">
+                                <form action="/admin/edit/{{ movie.id }}" method="POST" enctype="multipart/form-data">
+                                    <div class="modal-header border-secondary border-opacity-25 text-center">
+                                        <h5 class="modal-title w-100 fw-bold">Edit {{ movie.title }}</h5>
+                                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                                    </div>
+                                    <div class="modal-body p-4 text-start">
+                                        <div class="mb-3">
+                                            <label class="form-label text-muted">Title</label>
+                                            <input type="text" name="title" value="{{ movie.title }}" class="form-control bg-dark text-white border-secondary" required>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label class="form-label text-muted">Category</label>
+                                            <input type="text" name="category" value="{{ movie.category }}" class="form-control bg-dark text-white border-secondary">
+                                        </div>
+                                        <div class="mb-3">
+                                            <label class="form-label text-muted">Replace Thumbnail (Optional)</label>
+                                            <input type="file" name="thumbnail" accept="image/*" class="form-control bg-dark text-white border-secondary">
+                                        </div>
+                                    </div>
+                                    <div class="modal-footer border-secondary border-opacity-25">
+                                        <button type="submit" class="btn btn-brand rounded-pill px-4">Save Changes</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                    {% else %}
+                    <tr>
+                        <td colspan="4" class="text-center py-5 text-muted">No movies in the catalog yet.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Add Movie Modal -->
+<div class="modal fade" id="addMovieModal" tabindex="-1" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content text-light border-0 shadow-lg" style="background: var(--bg-card);">
+            <div class="modal-header border-secondary border-opacity-25 text-center">
+                <h5 class="modal-title w-100 fw-bold">Upload New Movie</h5>
+                <button type="button" class="btn-close btn-close-white" id="closeAddModal" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4 p-md-5">
+                <form id="uploadForm">
+                    <div class="row g-4 text-start">
+                        <div class="col-md-6">
+                            <label class="form-label text-muted fw-bold">Movie Title</label>
+                            <input type="text" name="title" class="form-control bg-dark text-white border-secondary" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label text-muted fw-bold">Category</label>
+                            <input type="text" name="category" class="form-control bg-dark text-white border-secondary" placeholder="e.g. Action, Drama, Sci-Fi" required>
+                        </div>
+                        
+                        <div class="col-12 mt-4">
+                            <label class="form-label text-muted fw-bold"><i class="fa fa-image me-1"></i> Thumbnail Image</label>
+                            <input type="file" name="thumbnail" accept="image/*" class="form-control bg-dark text-white border-secondary" required>
+                        </div>
+
+                        <div class="col-12 mt-4">
+                            <label class="form-label text-muted fw-bold"><i class="fa fa-video me-1"></i> Video File</label>
+                            <div class="card bg-dark border-secondary border-dashed p-4 text-center cursor-pointer" onclick="document.getElementById('videoFile').click()">
+                                <i class="fa fa-cloud-upload-alt fa-3x text-muted mb-2"></i>
+                                <h6 class="text-muted m-0">Click to Browse Video</h6>
+                                <input type="file" id="videoFile" name="video" accept="video/*" class="d-none" required>
+                            </div>
+                            <div class="text-center mt-2 small text-muted" id="videoNameDisplay">No file selected.</div>
+                        </div>
+                    </div>
+
+                    <!-- Progress Bar (Hidden initially) -->
+                    <div id="progressContainer" class="mt-4 d-none">
+                        <div class="d-flex justify-content-between text-muted small mb-1 fw-bold">
+                            <span id="progressStatus">Uploading to Server...</span>
+                            <span id="progressPercent">0%</span>
+                        </div>
+                        <div class="progress bg-dark border border-secondary border-opacity-25" style="height: 12px; border-radius: 6px;">
+                            <div id="progressBar" class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 0%; background-color: var(--brand-red);"></div>
+                        </div>
+                    </div>
+                    
+                    <div id="uploadError" class="alert alert-danger mt-3 d-none small"></div>
+
+                    <div class="mt-5 text-end">
+                        <button type="button" class="btn btn-outline-light rounded-pill px-4 me-2" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" id="submitBtn" class="btn btn-brand rounded-pill px-5 fw-bold"><i class="fa fa-upload me-2"></i> Start Upload</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.border-dashed { border-style: dashed !important; border-width: 2px !important; }
+.card.border-dashed:hover { border-color: var(--brand-red) !important; background: rgba(255,255,255,0.02) !important; }
+.cursor-pointer { cursor: pointer; }
+</style>
+
+<script>
+    // Show selected video filename
+    document.getElementById('videoFile').addEventListener('change', function(e) {
+        let name = e.target.files.length ? e.target.files[0].name : "No file selected.";
+        document.getElementById('videoNameDisplay').innerText = name;
+    });
+
+    // Handle AJAX Upload
+    document.getElementById('uploadForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        let submitBtn = document.getElementById('submitBtn');
+        let closeBtn = document.getElementById('closeAddModal');
+        let progressContainer = document.getElementById('progressContainer');
+        let progressBar = document.getElementById('progressBar');
+        let progressPercent = document.getElementById('progressPercent');
+        let progressStatus = document.getElementById('progressStatus');
+        let uploadError = document.getElementById('uploadError');
+        
+        // Reset state
+        uploadError.classList.add('d-none');
+        submitBtn.disabled = true;
+        closeBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="fa fa-spinner fa-spin me-2"></i> Uploading...';
+        progressContainer.classList.remove('d-none');
+        progressBar.style.width = '0%';
+        progressBar.classList.remove('bg-success', 'bg-warning');
+        progressBar.style.backgroundColor = 'var(--brand-red)';
+        progressPercent.innerText = '0%';
+        progressStatus.innerText = 'Uploading to Server...';
+        
+        let formData = new FormData(this);
+        let xhr = new XMLHttpRequest();
+        xhr.open('POST', '/admin/upload', true);
+        
+        // Progress event
+        xhr.upload.addEventListener('progress', function(e) {
+            if (e.lengthComputable) {
+                let percentComplete = Math.round((e.loaded / e.total) * 100);
+                progressBar.style.width = percentComplete + '%';
+                progressPercent.innerText = percentComplete + '%';
+                
+                if (percentComplete === 100) {
+                    progressStatus.innerText = 'Processing via Cloudinary (This may take a minute)...';
+                    progressBar.style.backgroundColor = '';
+                    progressBar.classList.add('bg-warning');
+                }
+            }
+        });
+        
+        // Complete event
+        xhr.onreadystatechange = function() {
+            if (xhr.readyState === 4) {
+                if (xhr.status === 200) {
+                    // Success
+                    progressBar.classList.remove('bg-warning');
+                    progressBar.classList.add('bg-success');
+                    progressStatus.innerText = 'Upload Complete!';
+                    submitBtn.innerText = 'Done';
+                    setTimeout(() => window.location.reload(), 1000);
+                } else {
+                    // Error
+                    let errorMsg = "An unknown error occurred.";
+                    try {
+                        let res = JSON.parse(xhr.responseText);
+                        if (res.error) errorMsg = res.error;
+                    } catch(e) {}
+                    
+                    uploadError.innerText = errorMsg;
+                    uploadError.classList.remove('d-none');
+                    progressContainer.classList.add('d-none');
+                    
+                    // Re-enable
+                    submitBtn.disabled = false;
+                    closeBtn.disabled = false;
+                    submitBtn.innerHTML = '<i class="fa fa-upload me-2"></i> Try Again';
+                }
+            }
+        };
+        
+        xhr.send(formData);
+    });
+</script>
+{% endblock %}

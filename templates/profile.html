@@ -1,0 +1,182 @@
+{% extends "base.html" %}
+{% block title %}Streamora - Settings{% endblock %}
+
+{% block content %}
+<div class="container py-5 mt-4">
+    <div class="row">
+        <!-- Sidebar Navigation -->
+        <div class="col-md-4 col-lg-3 mb-4">
+            <div class="card bg-card border-0 shadow rounded-4 overflow-hidden" style="background: var(--bg-card);">
+                <div class="card-body p-4 text-center border-bottom" style="border-color: rgba(255,255,255,0.05) !important;">
+                    <img src="{% if current_user.profile_pic %}{{ current_user.profile_pic }}{% else %}https://ui-avatars.com/api/?name={{ current_user.name|urlencode }}&background=181818&color=fff{% endif %}" class="rounded-circle shadow mb-3" width="100" height="100" style="object-fit:cover; border: 3px solid var(--brand-red);" alt="Avatar">
+                    <h4 class="fw-bold mb-0">{{ current_user.name }}</h4>
+                    <p class="text-muted small mb-0">@{{ current_user.username }}</p>
+                    <span class="badge rounded-pill mt-2 px-3 py-1 fw-normal" style="background: rgba(255,255,255,0.1); color: var(--text-light); border: 1px solid var(--brand-red);">{% if current_user.is_admin %}Admin All-Access{% else %}{{ current_user.subscription_tier }} Plan{% endif %}</span>
+                </div>
+                <div class="nav flex-column nav-pills p-3" id="settings-tabs" role="tablist" aria-orientation="vertical">
+                    <button class="nav-link text-start active fw-semibold mb-2" data-bs-toggle="pill" data-bs-target="#profile-tab" type="button" role="tab" style="color:var(--text-light);"><i class="fa fa-user me-2 w-20px"></i> Profile Details</button>
+                    {% if not current_user.is_admin %}
+                    <button class="nav-link text-start fw-semibold mb-2" data-bs-toggle="pill" data-bs-target="#subscription-tab" type="button" role="tab" style="color:var(--text-light);"><i class="fa fa-gem me-2 w-20px"></i> Subscription</button>
+                    {% endif %}
+                    <button class="nav-link text-start fw-semibold" data-bs-toggle="pill" data-bs-target="#appearance-tab" type="button" role="tab" style="color:var(--text-light);"><i class="fa fa-paint-brush me-2 w-20px"></i> Appearance</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab Content -->
+        <div class="col-md-8 col-lg-9">
+            <div class="tab-content">
+                
+                <!-- Profile Tab -->
+                <div class="tab-pane fade show active" id="profile-tab" role="tabpanel">
+                    <div class="card border-0 shadow rounded-4 p-4 p-md-5" style="background: var(--bg-card);">
+                        <h3 class="fw-bold mb-4">Profile Details</h3>
+                        <form method="POST" enctype="multipart/form-data">
+                            <input type="hidden" name="action" value="update_profile">
+                            <div class="mb-4">
+                                <label class="form-label text-muted fw-semibold">Display Name</label>
+                                <input name="name" value="{{ current_user.name }}" class="form-control form-control-lg bg-dark text-white border-secondary" required>
+                            </div>
+                            <div class="mb-4">
+                                <label class="form-label text-muted fw-semibold">Profile Picture (Optional)</label>
+                                <input type="file" name="profile_pic" class="form-control bg-dark text-white border-secondary" accept="image/*">
+                                <div class="form-text text-muted">A square image works best. Recommended 256x256.</div>
+                            </div>
+                            <button class="btn btn-brand px-5 py-2 rounded-pill fw-bold"><i class="fa fa-save me-2"></i> Save Profile</button>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Subscription Tab -->
+                {% if not current_user.is_admin %}
+                <div class="tab-pane fade" id="subscription-tab" role="tabpanel">
+                    <div class="card border-0 shadow rounded-4 p-4 p-md-5" style="background: var(--bg-card);">
+                        <h3 class="fw-bold mb-4">Subscription Plan</h3>
+                        <p class="text-muted mb-4">Upgrade your plan to unlock higher resolution streaming and exclusive features.</p>
+                        
+                        <form method="POST">
+                            <input type="hidden" name="action" value="update_subscription">
+                            <div class="row g-4 mb-4">
+                                <div class="col-md-4">
+                                    <label class="w-100 h-100">
+                                        <input type="radio" name="subscription_tier" value="Free" class="d-none theme-radio-parent" {% if current_user.subscription_tier == 'Free' %}checked{% endif %}>
+                                        <div class="card border border-2 theme-radio-card {% if current_user.subscription_tier == 'Free' %}active-card{% endif %} h-100 p-4 text-center rounded-4" style="background: var(--bg-dark); cursor: pointer;">
+                                            <h5 class="fw-bold mb-1">Free</h5>
+                                            <h3 class="mb-3">$0<span class="fs-6 text-muted">/mo</span></h3>
+                                            <p class="small text-muted mb-0">Standard Definition (480p)<br>Ad-supported streaming.</p>
+                                        </div>
+                                    </label>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="w-100 h-100">
+                                        <input type="radio" name="subscription_tier" value="Basic" class="d-none theme-radio-parent" {% if current_user.subscription_tier == 'Basic' %}checked{% endif %}>
+                                        <div class="card border border-2 theme-radio-card {% if current_user.subscription_tier == 'Basic' %}active-card{% endif %} h-100 p-4 text-center rounded-4" style="background: var(--bg-dark); cursor: pointer;">
+                                            <h5 class="fw-bold mb-1">Basic</h5>
+                                            <h3 class="mb-3">$8.99<span class="fs-6 text-muted">/mo</span></h3>
+                                            <p class="small text-muted mb-0">High Definition (720p)<br>Ad-free streaming.</p>
+                                        </div>
+                                    </label>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="w-100 h-100">
+                                        <input type="radio" name="subscription_tier" value="Premium" class="d-none theme-radio-parent" {% if current_user.subscription_tier == 'Premium' %}checked{% endif %}>
+                                        <div class="card border border-2 theme-radio-card position-relative {% if current_user.subscription_tier == 'Premium' %}active-card{% endif %} h-100 p-4 text-center rounded-4" style="background: var(--bg-dark); cursor: pointer;">
+                                            <div class="position-absolute align-self-center py-1 px-3 text-white rounded-pill small fw-bold" style="background-color: var(--brand-red); top: -12px; left: 50%; transform: translateX(-50%);">POPULAR</div>
+                                            <h5 class="fw-bold mb-1">Premium</h5>
+                                            <h3 class="mb-3">$14.99<span class="fs-6 text-muted">/mo</span></h3>
+                                            <p class="small text-muted mb-0">Ultra HD (4K)<br>Spatial Audio & Offline.</p>
+                                        </div>
+                                    </label>
+                                </div>
+                            </div>
+                            <button class="btn btn-brand px-5 py-2 rounded-pill fw-bold"><i class="fa fa-gem me-2"></i> Update Subscription</button>
+                        </form>
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- Appearance Tab -->
+                <div class="tab-pane fade" id="appearance-tab" role="tabpanel">
+                    <div class="card border-0 shadow rounded-4 p-4 p-md-5" style="background: var(--bg-card);">
+                        <h3 class="fw-bold mb-4">Appearance</h3>
+                        <p class="text-muted mb-4">Customize the accent color of Streamora across your devices.</p>
+                        
+                        <form method="POST" id="theme-form">
+                            <input type="hidden" name="action" value="update_theme">
+                            
+                            <label class="form-label text-muted fw-semibold">Select Theme Color</label>
+                            <div class="d-flex flex-wrap gap-3 mb-5">
+                                <!-- Themes -->
+                                {% set themes = [('#00E5FF', 'dark'), ('#00A8E1', 'white'), ('#1ce783', 'dark'), ('#9e00ff', 'white'), ('#00ffff', 'dark'), ('#ff007f', 'white'), ('#ffb400', 'dark'), ('#00d1b2', 'dark')] %}
+                                {% for hex, txt in themes %}
+                                <label>
+                                    <input type="radio" name="theme_color" value="{{ hex }}" class="d-none theme-color-radio" {% if current_user.theme_color == hex %}checked{% endif %}>
+                                    <div class="rounded-circle color-bubble {% if current_user.theme_color == hex %}border border-3 border-white{% endif %} d-flex align-items-center justify-content-center" style="width: 50px; height: 50px; background-color: {{ hex }}; cursor: pointer; box-shadow: 0 4px 10px {{ hex }}66;">
+                                        {% if current_user.theme_color == hex %}<i class="fa fa-check text-{{ txt }} fs-5"></i>{% endif %}
+                                    </div>
+                                </label>
+                                {% endfor %}
+                            </div>
+                            
+                            <button class="btn btn-brand px-5 py-2 rounded-pill fw-bold"><i class="fa fa-paint-roller me-2"></i> Apply Theme</button>
+                        </form>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+/* Nav pills brand color */
+.nav-pills .nav-link.active {
+    background-color: rgba(255,255,255,0.05);
+    color: var(--brand-red) !important;
+    border-left: 4px solid var(--brand-red);
+    border-radius: 0 8px 8px 0;
+}
+.nav-pills .nav-link { transition: all 0.2s; border-left: 4px solid transparent; border-radius: 0 8px 8px 0; }
+.nav-pills .nav-link:hover { background-color: rgba(255,255,255,0.02); }
+.w-20px { width: 25px; text-align: center; }
+
+/* Radio Cards */
+.theme-radio-card { border-color: rgba(255,255,255,0.1) !important; transition: all 0.2s; }
+label:hover .theme-radio-card { background: rgba(255,255,255,0.05) !important; transform: translateY(-5px); }
+.theme-radio-card.active-card { border-color: var(--brand-red) !important; box-shadow: 0 4px 15px rgba(229,9,20,0.2); }
+
+/* Color Bubbles */
+.color-bubble { transition: all 0.2s; }
+label:hover .color-bubble { transform: scale(1.1); }
+</style>
+
+<script>
+    // Update sub UI
+    const subRadios = document.querySelectorAll('.theme-radio-parent');
+    subRadios.forEach(radio => {
+        radio.addEventListener('change', function() {
+            document.querySelectorAll('.theme-radio-card').forEach(card => card.classList.remove('active-card'));
+            if(this.checked) this.nextElementSibling.classList.add('active-card');
+        });
+    });
+
+    // Update color UI dynamically (requires reload to apply globally, but shows check mark locally)
+    const colorRadios = document.querySelectorAll('.theme-color-radio');
+    colorRadios.forEach(radio => {
+        radio.addEventListener('change', function() {
+            document.querySelectorAll('.color-bubble').forEach(bubble => {
+                bubble.classList.remove('border', 'border-3', 'border-white');
+                bubble.innerHTML = ''; 
+            });
+            if(this.checked) {
+                const bubble = this.nextElementSibling;
+                bubble.classList.add('border', 'border-3', 'border-white');
+                let isDark = ['#1ce783', '#00ffff', '#ffb400', '#00d1b2'].includes(this.value);
+                bubble.innerHTML = `<i class="fa fa-check text-${isDark ? 'dark' : 'white'} fs-5"></i>`;
+                // Live preview CSS var just for testing the button:
+                document.documentElement.style.setProperty('--brand-red', this.value);
+            }
+        });
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Streamora{% endblock %}</title>
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <!-- Bootstrap & Icons -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <style>
+        :root {
+            --brand-red: {% if current_user.is_authenticated %}{{ current_user.theme_color }}{% else %}#00E5FF{% endif %};
+            --brand-red-hover: {% if current_user.is_authenticated %}{{ current_user.theme_color }}{% else %}#00B8CC{% endif %};
+            --bg-dark: #0f0f0f;
+            --bg-card: #181818;
+            --text-light: #f5f5f5;
+            --text-muted: #aaaaaa;
+        }
+
+        body {
+            background-color: var(--bg-dark);
+            color: var(--text-light);
+            font-family: 'Outfit', sans-serif;
+            margin: 0;
+            padding: 0;
+            overflow-x: hidden;
+        }
+
+        /* Glassmorphism Navbar */
+        .navbar-glass {
+            background: rgba(15, 15, 15, 0.7);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            transition: all 0.3s ease;
+        }
+
+        .brand-logo {
+            font-size: 1.8rem;
+            font-weight: 800;
+            color: var(--brand-red) !important;
+            letter-spacing: -1px;
+            text-transform: uppercase;
+            text-decoration: none;
+        }
+
+        /* Custom Buttons */
+        .btn-brand {
+            background-color: var(--brand-red);
+            color: white;
+            font-weight: 600;
+            border: none;
+            transition: all 0.2s;
+        }
+        .btn-brand:hover {
+            background-color: var(--brand-red-hover);
+            color: white;
+            transform: scale(1.05);
+        }
+
+        /* Nav links & Dropdown */
+        .nav-link {
+            color: var(--text-light) !important;
+            font-weight: 400;
+            opacity: 0.8;
+            transition: opacity 0.2s;
+        }
+        .nav-link:hover { opacity: 1; }
+        .dropdown-menu { background: var(--bg-card); border: 1px solid rgba(255,255,255,0.1); }
+        .dropdown-item { color: var(--text-light); padding: 10px 20px;}
+        .dropdown-item:hover { background: rgba(255,255,255,0.1); color: white; }
+
+        /* Flashes */
+        .flash-container {
+            position: fixed;
+            top: 90px;
+            right: 20px;
+            z-index: 9999;
+            max-width: 400px;
+        }
+    </style>
+    {% block head %}{% endblock %}
+</head>
+<body>
+
+<!-- Navigation -->
+<nav class="navbar navbar-expand-lg navbar-glass fixed-top py-3">
+    <div class="container">
+        <a class="navbar-brand brand-logo" href="/">Streamora</a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navContent">
+            <span class="fa fa-bars text-white"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navContent">
+            <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                <li class="nav-item"><a class="nav-link" href="/">Home</a></li>
+            </ul>
+            <form class="d-flex me-3 position-relative" action="/" method="GET" style="max-width:300px; width: 100%;">
+                <input class="form-control bg-dark border-secondary text-white rounded-pill px-4" type="search" name="q" placeholder="Search movies..." aria-label="Search" value="{{ request.args.get('q', '') }}">
+            </form>
+            <div class="d-flex align-items-center mt-3 mt-lg-0">
+                {% if current_user.is_authenticated %}
+                    {% if current_user.is_admin %}
+                        <a href="/admin" class="btn btn-brand rounded-pill btn-sm me-3 px-3"><i class="fa fa-cogs me-1"></i> Manage</a>
+                    {% endif %}
+                    <div class="dropdown">
+                        <a class="nav-link dropdown-toggle d-flex align-items-center p-0" href="#" role="button" data-bs-toggle="dropdown">
+                            <img src="{% if current_user.profile_pic %}{{ current_user.profile_pic }}{% else %}https://ui-avatars.com/api/?name={{ current_user.name|urlencode }}&background=181818&color=fff{% endif %}" class="rounded-circle me-2" width="40" height="40" alt="Avatar" style="object-fit:cover; border: 2px solid var(--brand-red);">
+                            <span class="d-none d-sm-block">{{ current_user.name.split(' ')[0] }}</span>
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-lg-end mt-3 shadow-lg rounded-3">
+                            <li><a class="dropdown-item" href="/profile"><i class="fa fa-cog me-2"></i>Settings</a></li>
+                            <li><hr class="dropdown-divider bg-secondary opacity-25"></li>
+                            <li><a class="dropdown-item text-danger" href="/logout"><i class="fa fa-sign-out-alt me-2"></i>Sign Out</a></li>
+                        </ul>
+                    </div>
+                {% else %}
+                    <a href="/login" class="nav-link fw-semibold me-3">Sign In</a>
+                    <a href="/register" class="btn btn-brand rounded-pill px-4 py-2">Sign Up</a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</nav>
+
+<!-- Flash Messages -->
+<div class="flash-container">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, message in messages %}
+          {% set alert_class = 'primary' %}
+          {% if category == 'danger' or category == 'error' %}{% set alert_class = 'danger' %}{% endif %}
+          {% if category == 'success' %}{% set alert_class = 'success' %}{% endif %}
+          <div class="alert alert-{{ alert_class }} alert-dismissible fade show shadow-lg border-0 rounded-3 text-white" style="background: rgba(30,30,30,0.95);" role="alert">
+            <div class="d-flex align-items-center">
+                {% if alert_class == 'success' %}
+                    <i class="fa fa-check-circle text-success me-2 fs-5"></i>
+                {% elif alert_class == 'danger' %}
+                    <i class="fa fa-exclamation-circle text-danger me-2 fs-5"></i>
+                {% else %}
+                    <i class="fa fa-info-circle text-info me-2 fs-5"></i>
+                {% endif %}
+                <div>{{ message }}</div>
+            </div>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="alert" aria-label="Close"></button>
+          </div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+</div>
+
+<!-- Main Content -->
+<div class="main-wrapper" style="padding-top: 86px; min-height: 100vh;">
+    {% block content %}{% endblock %}
+</div>
+
+<!-- Footer -->
+<footer class="text-center py-5 mt-5" style="background: #080808; color: var(--text-muted); font-size: 0.9rem;">
+    <div class="container">
+        <h3 class="brand-logo mb-3" style="font-size: 1.5rem;">Streamora</h3>
+        <p class="mb-0 px-3">&copy; 2026 Streamora. A premium cinematic experience.</p>
+    </div>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Watching {{ movie.title }} - Streamora</title>
+
+<!-- Fonts & Bootstrap -->
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+
+<style>
+:root { --brand-red: #E50914; }
+body { margin:0; background:black; font-family: 'Outfit', sans-serif; overflow: hidden; }
+
+/* Navigation Back */
+.back-btn {
+    position: absolute;
+    top: 30px;
+    left: 40px;
+    z-index: 50;
+    color: white;
+    font-size: 2rem;
+    text-shadow: 0 2px 10px rgba(0,0,0,0.8);
+    transition: transform 0.2s, color 0.2s;
+    text-decoration: none;
+}
+.back-btn:hover { color: var(--brand-red); transform: translateX(-5px); }
+
+.movie-title-overlay {
+    position: absolute;
+    top: 35px;
+    left: 100px;
+    color: white;
+    font-size: 1.5rem;
+    font-weight: 600;
+    z-index: 50;
+    text-shadow: 0 2px 10px rgba(0,0,0,0.8);
+    pointer-events: none;
+}
+
+/* Container */
+.player-container {
+    position: relative;
+    width: 100vw;
+    height: 100vh;
+    background: black;
+    cursor: none;
+}
+
+/* Video */
+video {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+
+/* Subtitles */
+video::cue {
+    font-size: 2vw;
+    color: white;
+    font-weight: 600;
+    text-shadow: 0 2px 5px rgba(0,0,0,1);
+    background: transparent;
+}
+
+/* Controls Wrapper */
+.controls-wrapper {
+    position: absolute;
+    bottom: 0;
+    width: 100%;
+    padding: 100px 40px 30px 40px;
+    background: linear-gradient(to top, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.6) 50%, transparent 100%);
+    transition: opacity 0.4s ease;
+}
+
+.hide { opacity: 0; cursor: none !important; }
+.player-container.show-cursor { cursor: default; }
+
+/* Progress bar */
+.progress-container {
+    height: 6px;
+    background: rgba(255,255,255,0.2);
+    cursor: pointer;
+    border-radius: 4px;
+    position: relative;
+    transition: height 0.2s ease;
+}
+.progress-container:hover { height: 10px; }
+
+.progress-bar-fill {
+    height: 100%;
+    background: var(--brand-red);
+    width: 0%;
+    border-radius: 4px;
+    position: relative;
+}
+.progress-bar-fill::after {
+    content: '';
+    position: absolute;
+    right: -5px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 14px;
+    height: 14px;
+    background: var(--brand-red);
+    border-radius: 50%;
+    opacity: 0;
+    transition: opacity 0.2s;
+}
+.progress-container:hover .progress-bar-fill::after { opacity: 1; }
+
+/* Controls layout */
+.controls-main {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 15px;
+}
+
+.control-group { display: flex; align-items: center; gap: 1rem; }
+
+/* Buttons */
+.controls-wrapper button {
+    background: transparent;
+    border: none;
+    color: white;
+    font-size: 1.5rem;
+    transition: color 0.2s, transform 0.2s;
+    display: flex; align-items: center; justify-content: center;
+}
+.controls-wrapper button:hover { color: var(--brand-red); transform: scale(1.1); }
+
+.play-btn { font-size: 2.2rem !important; }
+
+/* Volume Slider */
+.volume-slider {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 0;
+    background: transparent;
+    opacity: 0;
+    transition: width 0.3s, opacity 0.3s;
+    height: 5px;
+    border-radius: 3px;
+    outline: none;
+}
+.volume-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    height: 12px; width: 12px;
+    border-radius: 50%;
+    background: white;
+    cursor: pointer;
+}
+.volume-wrapper:hover .volume-slider { width: 80px; opacity: 1; background: rgba(255,255,255,0.2); }
+
+/* Center play */
+.center-play {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 80px;
+    color: rgba(255,255,255,0.8);
+    text-shadow: 0 0 30px rgba(0,0,0,0.5);
+    background: rgba(0,0,0,0.4);
+    width: 120px; height: 120px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    border: 2px solid rgba(255,255,255,0.2);
+    cursor: pointer;
+    transition: all 0.2s;
+}
+.center-play.hidden { display: none; }
+.center-play:hover { transform: translate(-50%, -50%) scale(1.1); background: rgba(229,9,20,0.6); border-color: var(--brand-red); }
+
+/* Time */
+.time-display { font-size: 1.1rem; color: #ddd; font-weight: 300; letter-spacing: 1px; }
+
+</style>
+</head>
+
+<body>
+
+<div class="player-container show-cursor" id="container">
+
+    <a href="/" class="back-btn" id="backBtn"><i class="fa fa-arrow-left"></i></a>
+    <div class="movie-title-overlay" id="titleOverlay">{{ movie.title }}</div>
+
+    <video id="video">
+        <source src="{{ movie.video_url | quality_filter(current_user) }}">
+        {% if movie.subtitle %}
+        <track src="{{ movie.subtitle }}" kind="subtitles" srclang="en" default>
+        {% endif %}
+    </video>
+
+    <!-- Center Play -->
+    <div id="centerPlay" class="center-play">
+        <i class="fa fa-play ms-2"></i>
+    </div>
+
+    <!-- Controls -->
+    <div id="controls" class="controls-wrapper hide">
+
+        <!-- Progress -->
+        <div class="progress-container" onclick="seek(event)" id="progressContainer">
+            <div id="progressBar" class="progress-bar-fill"></div>
+        </div>
+
+        <div class="controls-main">
+
+            <!-- Left -->
+            <div class="control-group">
+                <button onclick="togglePlay()" class="play-btn" id="playBtn">
+                    <i class="fa fa-play"></i>
+                </button>
+
+                <button onclick="skip(-10)" title="Rewind 10s">
+                    <i class="fa fa-rotate-left"></i>
+                </button>
+
+                <button onclick="skip(10)" title="Forward 10s">
+                    <i class="fa fa-rotate-right"></i>
+                </button>
+
+                <div class="control-group volume-wrapper ms-2">
+                    <button><i class="fa fa-volume-up"></i></button>
+                    <input type="range" min="0" max="1" step="0.01" class="volume-slider" onchange="video.volume=this.value" oninput="video.volume=this.value">
+                </div>
+
+                <!-- Time -->
+                <div id="time" class="time-display ms-3">00:00 / 00:00</div>
+                
+                <!-- Resolution Badge -->
+                <span class="badge rounded-pill text-white border border-secondary border-opacity-50 px-2 ms-3 d-none d-md-inline" style="background: rgba(0,0,0,0.5); font-weight: normal; letter-spacing: 0.5px;">
+                    <i class="fa fa-signal text-{{ 'danger' if current_user.is_admin or current_user.subscription_tier == 'Premium' else ('warning' if current_user.subscription_tier == 'Basic' else 'secondary') }} me-1"></i>
+                    {% if current_user.is_admin or current_user.subscription_tier == 'Premium' %}4K Ultra HD{% elif current_user.subscription_tier == 'Basic' %}HD 720p{% else %}SD 480p{% endif %}
+                </span>
+            </div>
+
+            <!-- Right -->
+            <div class="control-group">
+                {% if movie.subtitle %}
+                <button onclick="toggleSubs()" title="Toggle Subtitles" id="subBtn" class="text-danger">
+                    <i class="fa fa-closed-captioning"></i>
+                </button>
+                {% endif %}
+
+                <button onclick="toggleFullscreen()" title="Fullscreen">
+                    <i class="fa fa-expand" id="fsIcon"></i>
+                </button>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<script>
+const video = document.getElementById("video");
+const progressBar = document.getElementById("progressBar");
+const controls = document.getElementById("controls");
+const container = document.getElementById("container");
+const centerPlay = document.getElementById("centerPlay");
+const playBtn = document.getElementById("playBtn");
+const timeDisplay = document.getElementById("time");
+const backBtn = document.getElementById("backBtn");
+const titleOverlay = document.getElementById("titleOverlay");
+const subBtn = document.getElementById("subBtn");
+
+let subsOn = true;
+let isFullscreen = false;
+
+// Play sync
+video.addEventListener("play", ()=>{
+    centerPlay.classList.add("hidden");
+    playBtn.innerHTML='<i class="fa fa-pause"></i>';
+});
+
+video.addEventListener("pause", ()=>{
+    centerPlay.classList.remove("hidden");
+    playBtn.innerHTML='<i class="fa fa-play ms-1"></i>';
+});
+
+function togglePlay(){
+    video.paused ? video.play() : video.pause();
+}
+
+video.onclick = togglePlay;
+centerPlay.onclick = togglePlay;
+
+// Skip
+function skip(s){ video.currentTime += s; }
+
+// Progress + runtime
+video.addEventListener("timeupdate", ()=>{
+    if(isNaN(video.duration)) return;
+    let percent = (video.currentTime/video.duration)*100;
+    progressBar.style.width = percent + "%";
+    timeDisplay.innerText = format(video.currentTime) + " / " + format(video.duration);
+});
+
+// Seek
+function seek(e){
+    const rect = e.currentTarget.getBoundingClientRect();
+    const pos = (e.clientX - rect.left) / rect.width;
+    video.currentTime = pos * video.duration;
+}
+
+// Time format (supports hours)
+function format(s){
+    if (!s || isNaN(s)) return "00:00";
+    let h = Math.floor(s / 3600);
+    let m = Math.floor((s % 3600) / 60);
+    let sec = Math.floor(s % 60);
+    if (h > 0) return h + ":" + (m<10?"0":"") + m + ":" + (sec<10?"0":"") + sec;
+    return (m<10?"0":"") + m + ":" + (sec<10?"0":"") + sec;
+}
+
+// Subtitles toggle
+function toggleSubs(){
+    let track = video.textTracks[0];
+    if(track) {
+        subsOn = !subsOn;
+        track.mode = subsOn ? "showing" : "hidden";
+        subBtn.className = subsOn ? "text-danger" : "text-white";
+    }
+}
+
+// Fullscreen
+function toggleFullscreen() {
+    if (!document.fullscreenElement) {
+        container.requestFullscreen().catch(err => {
+            console.log(`Error attempting to enable fullscreen: ${err.message}`);
+        });
+    } else {
+        document.exitFullscreen();
+    }
+}
+
+document.addEventListener("fullscreenchange", () => {
+    isFullscreen = !!document.fullscreenElement;
+    document.getElementById("fsIcon").className = isFullscreen ? "fa fa-compress" : "fa fa-expand";
+});
+
+// Auto-hide controls
+let t;
+function showControls() {
+    controls.classList.remove("hide");
+    backBtn.classList.remove("hide");
+    titleOverlay.classList.remove("hide");
+    container.classList.add("show-cursor");
+    
+    clearTimeout(t);
+    t = setTimeout(()=>{
+        if(!video.paused) {
+            controls.classList.add("hide");
+            backBtn.classList.add("hide");
+            titleOverlay.classList.add("hide");
+            container.classList.remove("show-cursor");
+        }
+    }, 4000); // Increased visibility time slightly
+}
+
+container.addEventListener("mousemove", showControls);
+container.addEventListener("touchstart", showControls);
+showControls(); // show once at page load
+
+// Keyboard bindings
+document.addEventListener('keydown', (e) => {
+    // Ignore input events e.g. if we add a search bar here later
+    if(['INPUT', 'TEXTAREA'].includes(e.target.tagName)) return;
+    
+    switch(e.code) {
+        case 'Space':
+            e.preventDefault();
+            togglePlay();
+            showControls();
+            break;
+        case 'KeyF':
+            e.preventDefault();
+            toggleFullscreen();
+            break;
+        case 'KeyC':
+            if (document.getElementById('subBtn')) {
+                toggleSubs();
+                showControls();
+            }
+            break;
+        case 'ArrowRight':
+            e.preventDefault();
+            skip(10);
+            showControls();
+            break;
+        case 'ArrowLeft':
+            e.preventDefault();
+            skip(-10);
+            showControls();
+            break;
+    }
+});
+
+// Analytics Tracking
+const MOVIE_ID = {{ movie.id }};
+const START_TIME = {{ start_time }};
+
+video.addEventListener('loadedmetadata', () => {
+    if(START_TIME > 0) video.currentTime = START_TIME;
+});
+
+setInterval(() => {
+    if(!video.paused) {
+        fetch('/api/progress', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ movie_id: MOVIE_ID, timestamp: video.currentTime })
+        }).catch(err => console.log('Tracking error:', err));
+    }
+}, 5000);
+
+</script>
+
+</body>
+</html>
